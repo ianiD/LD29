@@ -21,14 +21,14 @@ bool justEnteredMMenu;
 #define MAIN_MENU 2
 #define NEW_GAME_SCREEN 3
 #define STORY 4
-#define INSTRUCTIONS 5
-#define GAME 10
+#define SCENE1p1 10
+#define SCENE1p2 11
 
 int currentGameState = NONE;
 
 void gotoMainMenu(){
     currentGameState = MAIN_MENU;
-    justEnteredMMenu=true;
+    justEnteredMMenu = true;
 }
 
 SDL_Window* gWin = NULL;
@@ -48,6 +48,9 @@ SDL_Surface* gameTitle = NULL;
 SDL_Surface* playButton = NULL, *quitButton = NULL;
 SDL_Surface* newGame = NULL, *continueGame = NULL;
 SDL_Surface* mainMenu = NULL;
+
+SDL_Surface* scene1bars = NULL;
+SDL_Surface* scene1nobars = NULL;
 
 SDL_Surface* alpha1 = NULL;
 
@@ -156,6 +159,11 @@ int loadMedia(){
     if((LD29_splash = load("res/logo/ld29sp.png"))==NULL)
         return 1;
 
+    if((scene1bars  = load("res/scenes/scene1_bars.png"))==NULL)
+        return 1;
+    if((scene1nobars= load("res/scenes/scene1_nobars.png"))==NULL)
+        return 1;
+
     if((winIcon     = load("res/icon.png"))==NULL)
         return 1;
 
@@ -197,7 +205,10 @@ bool clickedButton(button b, int x, int y){
 void handleEvent(SDL_Event e){
     switch(e.type){
         case SDL_QUIT: {
-            quit();
+            if(currentGameState==MAIN_MENU)
+                quit();
+            else
+                gotoMainMenu();
             break;
         }
         case SDL_KEYDOWN: {
@@ -239,7 +250,7 @@ void render() {
             SDL_BlitScaled(buttons[i].s,NULL,gWinSrf,&buttons[i].b);
     }
     SDL_UpdateWindowSurface(gWin);
-    SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0);
+
 }
 
 void showandwaitforinput(SDL_Surface* s) {
@@ -272,7 +283,8 @@ void initButtons(){
     makeButton(LD29_splash,buttonRect,&openLDWebPage, MAIN_MENU);
 
 }
-
+bool firstTimeSCENE1 = true;
+long long scene1timer = -1;
 void gameLoop() {
     SDL_SetWindowIcon(gWin,winIcon);
     int ticks = 0; //-> should allways be 60 (sometimes 59 or 61)
@@ -284,6 +296,7 @@ void gameLoop() {
     running = true;
     initButtons();
     while(running){
+        SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0);
         long long now = SDL_GetTicks();
         switch(currentGameState){
             case NONE: {
@@ -363,7 +376,7 @@ void gameLoop() {
                 break;
 
             }
-            case GAME: {
+            /*case GAME: {
                 int standingframe = SDL_GetTicks() / standTime % 2;
                 int walkingframe = SDL_GetTicks() / walkTime % 4;
                 SDL_Rect standrect, standrectd, walkrect, walkrectd;
@@ -374,6 +387,39 @@ void gameLoop() {
                 walkrectd = {100,0,64,128};
                 SDL_BlitSurface(playerMole,&walkrect,gWinSrf,&walkrectd);
                 break;
+            }*/
+
+            case SCENE1p1: {
+                SDL_Event e;
+                SDL_BlitSurface(scene1bars,NULL,gWinSrf,NULL);
+                render();
+                while(SDL_PollEvent(&e))
+                    if(e.type==SDL_MOUSEBUTTONDOWN) {
+                        int mx=e.button.x, my=e.button.y;
+                        if(mx>=468&&my>=254&&mx<=521&&my<=334){
+                            SDL_Rect pmr = {SDL_GetTicks()/standTime%2*64,0,64,128}, tr = {400,200,64,128};
+                            SDL_BlitSurface(playerMole,&pmr,gWinSrf,&tr);
+                            scene1timer=SDL_GetTicks();
+                        }
+                    } else if(e.type==SDL_QUIT)
+                        gotoMainMenu();
+                if(SDL_GetTicks()-scene1timer>2000&&scene1timer!=-1)
+                    currentGameState=SCENE1p2;
+                else{
+                    if((SDL_GetTicks()-scene1timer)%42==0&&scene1timer!=-1){
+                        SDL_Rect gwsr = {400,200,64,128}, pml = {SDL_GetTicks() / standTime % 2 * 64, 0, 64, 128};
+                        SDL_BlitSurface(playerMole,&pml,gWinSrf,&gwsr);
+                        render();
+                    }
+                }
+                break;
+            }
+
+            case SCENE1p2: {
+                SDL_BlitSurface(scene1nobars,NULL,gWinSrf,NULL);
+                SDL_Rect gwsr = {400,200,64,128}, pml = {SDL_GetTicks() / standTime % 2 * 64, 128, 64, 128};
+                SDL_BlitSurface(playerMole,&pml,gWinSrf,&gwsr);
+                break;
             }
 
             case STORY: {
@@ -383,7 +429,8 @@ void gameLoop() {
                     showandwaitforinput(story2);
                     showandwaitforinput(story3);
                 }
-
+                currentGameState=SCENE1p1;
+                //scene1timer=-1;
                 break;
             }
             case NEW_GAME_SCREEN: {
