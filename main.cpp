@@ -1,6 +1,9 @@
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_image.h>
 #include<cstdio>
+#ifdef WIN32
+#include<windows.h>
+#endif // WIN32
 
 FILE* logs;
 
@@ -78,6 +81,15 @@ SDL_Surface* load(char* url){
     return result;
 }
 
+void openLDWebPage() {
+#ifdef WIN32
+    ShellExecute(NULL, "open", "http://www.ludumdare.com/compo", NULL, NULL, SW_SHOWNORMAL);
+#else
+    system("x-www-browser http://www.ludumdare.com/compo");
+#endif // WIN32
+    return;
+}
+
 void quit() {
     running = false;
 }
@@ -144,13 +156,13 @@ int loadMedia(){
 bool clickedButton(button b, int x, int y){
     bool wx = b.b.x<=x&&(b.b.x+b.b.w)>=x;
     bool wy = b.b.y<=y&&(b.b.y+b.b.h)>=y;
-    return wx&&wy;
+    return wx&&wy&&(b.gameState==currentGameState);
 }
 
 void handleEvent(SDL_Event e){
     switch(e.type){
         case SDL_QUIT: {
-            cleanUp();
+            quit();
             break;
         }
         case SDL_KEYDOWN: {
@@ -188,7 +200,8 @@ void tick(){
 
 void render() {
     for(int i=0;i<buttoncount;i++){
-        SDL_BlitScaled(buttons[i].s,NULL,gWinSrf,&buttons[i].b);
+        if(buttons[i].gameState==currentGameState)
+            SDL_BlitScaled(buttons[i].s,NULL,gWinSrf,&buttons[i].b);
     }
     SDL_UpdateWindowSurface(gWin);
     SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0);
@@ -298,6 +311,12 @@ void gameLoop() {
                     buttonRect.y=150;
                     buttonRect.w=128;
                     makeButton(quitButton,buttonRect,&quit, MAIN_MENU);
+
+                    buttonRect.h=128;
+                    buttonRect.w=256;
+                    buttonRect.x=WIDTH-256;
+                    buttonRect.y=HEIGHT-128;
+                    makeButton(LD29_splash,buttonRect,&openLDWebPage, MAIN_MENU);
                 }
                 break;
             }
