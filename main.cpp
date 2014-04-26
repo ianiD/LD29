@@ -367,22 +367,11 @@ void gameLoop() {
                 int standingframe = SDL_GetTicks() / standTime % 2;
                 int walkingframe = SDL_GetTicks() / walkTime % 4;
                 SDL_Rect standrect, standrectd, walkrect, walkrectd;
-                standrect.x=standingframe*64;
-                standrect.y=0;
-                standrect.h=128;
-                standrect.w=64;
-                standrectd.x=standrectd.y=0;
-                standrectd.w=64;
-                standrectd.h=128;
+                standrect  = {standingframe*64,0,64,128};
+                standrectd = {0,0,64,128};
                 SDL_BlitSurface(playerMole,&standrect,gWinSrf,&standrectd);
-                walkrect.x=walkingframe*64;
-                walkrect.y=0;
-                walkrect.h=128;
-                walkrect.w=64;
-                walkrectd.x=100;
-                walkrectd.y=0;
-                walkrectd.w=64;
-                walkrectd.h=128;
+                walkrect  = {walkingframe*64,0,64,128};
+                walkrectd = {100,0,64,128};
                 SDL_BlitSurface(playerMole,&walkrect,gWinSrf,&walkrectd);
                 break;
             }
