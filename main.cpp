@@ -53,6 +53,8 @@ SDL_Surface* alpha1 = NULL;
 
 SDL_Surface* playerMole = NULL;
 
+SDL_Surface* story1 = NULL, *story2 = NULL, *story3 = NULL;
+
 #define WIDTH 640
 #define HEIGHT 480
 
@@ -177,6 +179,13 @@ int loadMedia(){
 
     if((alpha1      = load("res/alpha1blackpixel.png"))==NULL)
         return 1;
+
+    if((story1      = load("res/story/story1.png"))==NULL)
+        return 1;
+    if((story2      = load("res/story/story2.png"))==NULL)
+        return 1;
+    if((story3      = load("res/story/story3.png"))==NULL)
+        return 1;
 }
 
 bool clickedButton(button b, int x, int y){
@@ -235,6 +244,7 @@ void render() {
 
 void showandwaitforinput(SDL_Surface* s) {
     SDL_BlitScaled(s,NULL,gWinSrf,&gWinSrf->clip_rect);
+    SDL_UpdateWindowSurface(gWin);
     SDL_Event e;
     while(true)
         while(SDL_PollEvent(&e))
@@ -380,11 +390,9 @@ void gameLoop() {
             case STORY: {
                 if(justenterdedstory){
                     justenterdedstory=false;
-                    showandwaitforinput(LD29_logo1);/*
+                    showandwaitforinput(story1);
                     showandwaitforinput(story2);
                     showandwaitforinput(story3);
-                    showandwaitforinput(story4);
-                    showandwaitforinput(story5);*/
                 }
 
                 break;
