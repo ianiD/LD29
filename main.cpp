@@ -1,6 +1,7 @@
 #include<SDL2/SDL.h>
 #include<SDL2/SDL_image.h>
 #include<cstdio>
+#include<cstdlib>
 #ifdef WIN32
 #include<windows.h>
 #endif // WIN32
@@ -45,6 +46,8 @@ SDL_Surface* winIcon = NULL;
 SDL_Surface* gameTitle = NULL;
 
 SDL_Surface* playButton = NULL, *quitButton = NULL;
+SDL_Surface* newGame = NULL, *continueGame = NULL;
+SDL_Surface* mainMenu = NULL;
 
 SDL_Surface* alpha1 = NULL;
 
@@ -119,10 +122,26 @@ int init_sdl() {
         return 1;
     }
 }
+void loadGame(){}
+void playGame(){}
+
+void gotoStory(){currentGameState=STORY;}
+
+void continueLastGame() {
+    loadGame();
+    playGame();
+}
+bool justenterdedstory;
+void playNewGame() {
+    gotoStory();
+    justenterdedstory=true;
+}
 
 void nothing(){}
+bool firstTimeNGS;
 void play() {
     currentGameState = NEW_GAME_SCREEN;
+    firstTimeNGS = true;
 }
 
 int loadMedia(){
@@ -136,6 +155,13 @@ int loadMedia(){
         return 1;
 
     if((winIcon     = load("res/icon.png"))==NULL)
+        return 1;
+
+    if((continueGame= load("res/buttons/continueGame.png"))==NULL)
+        return 1;
+    if((newGame     = load("res/buttons/newGame.png"))==NULL)
+        return 1;
+    if((mainMenu    = load("res/buttons/mainMenu.png"))==NULL)
         return 1;
 
     if((playerMole  = load("res/sprites/MolePlayer.png"))==NULL)
@@ -207,6 +233,36 @@ void render() {
     SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0);
 }
 
+void showandwaitforinput(SDL_Surface* s) {
+    SDL_BlitScaled(s,NULL,gWinSrf,&gWinSrf->clip_rect);
+    SDL_Event e;
+    while(true)
+        while(SDL_PollEvent(&e))
+            if(e.type==SDL_KEYDOWN)
+                return;
+}
+
+void initButtons(){
+    SDL_Rect buttonRect;
+
+    buttonRect = {WIDTH/2-256,HEIGHT/2-132,256,128};
+    makeButton(continueGame,buttonRect,&continueLastGame,NEW_GAME_SCREEN);
+    buttonRect = {WIDTH/2,HEIGHT/2-132,256,128};
+    makeButton(newGame,buttonRect,&playNewGame,NEW_GAME_SCREEN);
+    buttonRect = {WIDTH/2-64,HEIGHT/2+32,128,64};
+    makeButton(mainMenu,buttonRect,&gotoMainMenu,NEW_GAME_SCREEN);
+
+    buttonRect={WIDTH/2-128,10,256,64};
+    makeButton(gameTitle,buttonRect,&nothing, MAIN_MENU);
+    buttonRect={WIDTH/2-64,80,128,64};
+    makeButton(playButton,buttonRect,&play, MAIN_MENU);
+    buttonRect={WIDTH/2-64,150,128,64};
+    makeButton(quitButton,buttonRect,&quit, MAIN_MENU);
+    buttonRect = {WIDTH-256,HEIGHT-128,256,128};
+    makeButton(LD29_splash,buttonRect,&openLDWebPage, MAIN_MENU);
+
+}
+
 void gameLoop() {
     SDL_SetWindowIcon(gWin,winIcon);
     int ticks = 0; //-> should allways be 60 (sometimes 59 or 61)
@@ -216,6 +272,7 @@ void gameLoop() {
     const double ms = 1000.0/60.0;
     double delta = 0;
     running = true;
+    initButtons();
     while(running){
         long long now = SDL_GetTicks();
         switch(currentGameState){
@@ -293,32 +350,8 @@ void gameLoop() {
             }
             case MAIN_MENU: {
                 SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0xffd5ad);
-                if(justEnteredMMenu){
-                    justEnteredMMenu=false;
-                    SDL_Rect buttonRect;
-                    buttonRect.x=WIDTH/2-128;
-                    buttonRect.y=10;
-                    buttonRect.h=64;
-                    buttonRect.w=256;
-                    makeButton(gameTitle,buttonRect,&nothing, MAIN_MENU);
-
-                    buttonRect.x=WIDTH/2-64;
-                    buttonRect.y=80;
-                    buttonRect.w=128;
-                    makeButton(playButton,buttonRect,&play, MAIN_MENU);
-
-                    buttonRect.x=WIDTH/2-64;
-                    buttonRect.y=150;
-                    buttonRect.w=128;
-                    makeButton(quitButton,buttonRect,&quit, MAIN_MENU);
-
-                    buttonRect.h=128;
-                    buttonRect.w=256;
-                    buttonRect.x=WIDTH-256;
-                    buttonRect.y=HEIGHT-128;
-                    makeButton(LD29_splash,buttonRect,&openLDWebPage, MAIN_MENU);
-                }
                 break;
+
             }
             case GAME: {
                 int standingframe = SDL_GetTicks() / standTime % 2;
@@ -341,6 +374,23 @@ void gameLoop() {
                 walkrectd.w=64;
                 walkrectd.h=128;
                 SDL_BlitSurface(playerMole,&walkrect,gWinSrf,&walkrectd);
+                break;
+            }
+
+            case STORY: {
+                if(justenterdedstory){
+                    justenterdedstory=false;
+                    showandwaitforinput(LD29_logo1);/*
+                    showandwaitforinput(story2);
+                    showandwaitforinput(story3);
+                    showandwaitforinput(story4);
+                    showandwaitforinput(story5);*/
+                }
+
+                break;
+            }
+            case NEW_GAME_SCREEN: {
+                SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0xffd5ad);
                 break;
             }
         }
