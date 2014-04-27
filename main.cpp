@@ -32,7 +32,20 @@ bool justEnteredMMenu;
 
 int currentGameState = NONE;
 
+void saveGame(){
+    FILE* save = fopen("save","w");
+    fprintf(save,"%d\n",currentGameState);
+    if(currentGameState==DIGDOWN){
+        printf("%d %d",levelWidth,levelHeight);
+        for(int i=0;i<levelWidth;i++)
+            for(int j=0;j<levelHeight;j++)
+                printf("%c",' '+level[i][j]);
+    }
+}
+
 void gotoMainMenu(){
+    if(currentGameState>3)
+        saveGame();
     currentGameState = MAIN_MENU;
     justEnteredMMenu = true;
 }
@@ -145,19 +158,24 @@ int init_sdl() {
         return 1;
     }
 }
-void loadGame(){}
-void playGame(){}
+void loadGame() {
 
-void gotoStory(){currentGameState=STORY;}
+}
+void playGame(bool newGame){
+    currentGameState=DIGDOWN;
+    location=newGame; // I use location as the level now
+}
+
+void gotoStory(){
+    currentGameState=STORY;
+}
 
 void continueLastGame() {
     loadGame();
-    playGame();
+    playGame(false);
 }
-bool justenterdedstory;
 void playNewGame() {
     gotoStory();
-    justenterdedstory=true;
 }
 
 void nothing(){}
@@ -541,10 +559,8 @@ void gameLoop() {
                 while(SDL_PollEvent(&e))
                     if(e.type==SDL_KEYDOWN)
                         part++;
-                if(part==6){
-                    currentGameState = DIGDOWN;
-                    location = 0; //location will now be the level
-                }
+                if(part==6)
+                    playGame(true);
                 break;
             }
 
