@@ -16,13 +16,17 @@ bool justEnteredMMenu;
 #define walkTime 100
 #define standTime 500
 
+#define walkSpeed 2
+
 #define NONE 0
 #define LOGOS 1
 #define MAIN_MENU 2
 #define NEW_GAME_SCREEN 3
 #define STORY 4
-#define SCENE1p1 10
-#define SCENE1p2 11
+#define SCENE1p1 11
+#define SCENE1p2 12
+#define SCENE1p3 13
+#define MISSION1 101
 
 int currentGameState = NONE;
 
@@ -57,6 +61,9 @@ SDL_Surface* alpha1 = NULL;
 SDL_Surface* playerMole = NULL;
 
 SDL_Surface* story1 = NULL, *story2 = NULL, *story3 = NULL;
+SDL_Surface* SCENE1P3 = NULL;
+
+SDL_Surface* Mission1[] = {NULL, NULL};
 
 #define WIDTH 640
 #define HEIGHT 480
@@ -72,6 +79,8 @@ void cleanUp() {
     SDL_DestroyWindow(gWin);
     SDL_FreeSurface(gWinSrf);
 }
+
+bool waliking = false;
 
 bool keys[512];
 
@@ -110,10 +119,15 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
+int location;
+int playerdir;
+bool walking;
+int x, y;
+
 int init_sdl() {
     logs = fopen("log.log","w");
     SDL_Init(SDL_INIT_EVERYTHING);
-    IMG_Init(IMG_INIT_PNG|IMG_INIT_JPG);
+    IMG_Init(IMG_INIT_PNG);
 
     gWin = SDL_CreateWindow("Extinct",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,WIDTH,HEIGHT,SDL_WINDOW_SHOWN);
     if(gWin == NULL){
@@ -194,12 +208,31 @@ int loadMedia(){
         return 1;
     if((story3      = load("res/story/story3.png"))==NULL)
         return 1;
+    if((SCENE1P3    = load("res/scenes/scene1_p3.png"))==NULL)
+        return 1;
+
+    if((Mission1[0] = load("res/scenes/mission1_0.png"))==NULL)
+        return 1;
+    if((Mission1[1] = load("res/scenes/mission1_1.png"))==NULL)
+        return 1;
 }
 
 bool clickedButton(button b, int x, int y){
     bool wx = b.b.x<=x&&(b.b.x+b.b.w)>=x;
     bool wy = b.b.y<=y&&(b.b.y+b.b.h)>=y;
     return wx&&wy&&(b.gameState==currentGameState);
+}
+
+bool movement_key(int keysym){
+    if(keysym==SDLK_d||keysym==SDLK_RIGHT){
+        playerdir=0;//right
+        return true;
+    }
+    if(keysym==SDLK_q||keysym==SDLK_a||keysym==SDLK_LEFT){
+        playerdir=1;
+        return true;
+    }
+    return false;
 }
 
 void handleEvent(SDL_Event e){
@@ -212,10 +245,14 @@ void handleEvent(SDL_Event e){
             break;
         }
         case SDL_KEYDOWN: {
+            if(movement_key(e.key.keysym.sym))
+                walking = true;
             keys[e.key.keysym.scancode]=true;
             break;
         }
         case SDL_KEYUP: {
+            if(movement_key(e.key.keysym.sym))
+                walking = false;
             keys[e.key.keysym.scancode]=false;
             break;
         }
@@ -285,6 +322,26 @@ void initButtons(){
 }
 bool firstTimeSCENE1 = true;
 long long scene1timer = -1;
+
+void renderPlayer(int dir, bool walking, int x, int y){
+    SDL_Rect r = {x,y,64,128};
+    int X;
+    if(walking)
+        X=128+SDL_GetTicks()/walkTime%4*64;
+    SDL_Rect k = {X,dir*128,64,128};
+    SDL_BlitSurface(playerMole,&k,gWinSrf,&r);
+}
+
+bool left(){
+    return keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_Q];
+}
+bool right(){
+    return keys[SDL_SCANCODE_D];
+}
+bool up() {
+    return keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_Z];
+}
+
 void gameLoop() {
     SDL_SetWindowIcon(gWin,winIcon);
     int ticks = 0; //-> should allways be 60 (sometimes 59 or 61)
@@ -419,6 +476,41 @@ void gameLoop() {
                 SDL_BlitSurface(scene1nobars,NULL,gWinSrf,NULL);
                 SDL_Rect gwsr = {400,200,64,128}, pml = {SDL_GetTicks() / standTime % 2 * 64, 128, 64, 128};
                 SDL_BlitSurface(playerMole,&pml,gWinSrf,&gwsr);
+                if(SDL_GetTicks()-scene1timer>6000)
+                    currentGameState=SCENE1p3;
+                break;
+            }
+
+            case SCENE1p3: {
+                SDL_BlitSurface(SCENE1P3,NULL,gWinSrf,NULL);
+                SDL_Event e;
+                while(SDL_PollEvent(&e)){
+                    if(e.type==SDL_KEYDOWN){
+                        currentGameState=MISSION1;
+                        location = 0;
+                        x=550;
+                        y=250;
+                        playerdir = 0;
+                    }
+                }
+                break;
+            }
+
+            case MISSION1: {
+                SDL_BlitSurface(Mission1[location],NULL,gWinSrf,NULL);
+                if(left()&&!right()&&x>0)
+                    x-=walkSpeed;
+                if(right()&&!left()&&x<WIDTH-64)
+                    x+=walkSpeed;
+                if(x>=30&&x<=120 && location == 0) {
+                    location = 1;
+                    x=450;
+                }
+                if(x>=512&&location==1){
+                    location = 0 ;
+                    x=550;
+                }
+                renderPlayer(playerdir,walking&&(left()!=right()),x,y);
                 break;
             }
 
