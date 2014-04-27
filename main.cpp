@@ -22,11 +22,13 @@ bool justEnteredMMenu;
 #define LOGOS 1
 #define MAIN_MENU 2
 #define NEW_GAME_SCREEN 3
-#define STORY 4
+#define STORY  4
+#define STORY2 5
 #define SCENE1p1 11
 #define SCENE1p2 12
 #define SCENE1p3 13
 #define MISSION1 101
+#define DIGDOWN 102
 
 int currentGameState = NONE;
 
@@ -60,10 +62,12 @@ SDL_Surface* alpha1 = NULL;
 
 SDL_Surface* playerMole = NULL;
 
-SDL_Surface* story1 = NULL, *story2 = NULL, *story3 = NULL;
+SDL_Surface* story[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
+int part;
 SDL_Surface* SCENE1P3 = NULL;
 
 SDL_Surface* Mission1[] = {NULL, NULL};
+SDL_Surface* mission1bossdialogue = NULL;
 
 #define WIDTH 640
 #define HEIGHT 480
@@ -202,11 +206,11 @@ int loadMedia(){
     if((alpha1      = load("res/alpha1blackpixel.png"))==NULL)
         return 1;
 
-    if((story1      = load("res/story/story1.png"))==NULL)
+    if((story[1]    = load("res/story/story1.png"))==NULL)
         return 1;
-    if((story2      = load("res/story/story2.png"))==NULL)
+    if((story[2]    = load("res/story/story2.png"))==NULL)
         return 1;
-    if((story3      = load("res/story/story3.png"))==NULL)
+    if((story[3]    = load("res/story/story3.png"))==NULL)
         return 1;
     if((SCENE1P3    = load("res/scenes/scene1_p3.png"))==NULL)
         return 1;
@@ -215,6 +219,13 @@ int loadMedia(){
         return 1;
     if((Mission1[1] = load("res/scenes/mission1_1.png"))==NULL)
         return 1;
+    if((mission1bossdialogue = load("res/scenes/mission1_bossdial.png"))==NULL)
+        return 1;
+    if((story[4]    = load("res/story/story4.png"))==NULL)
+        return 1;
+    if((story[5]    = load("res/story/story5.png"))==NULL)
+        return 1;
+    return 0;
 }
 
 bool clickedButton(button b, int x, int y){
@@ -278,7 +289,6 @@ void tick(){
     SDL_Event e;
     while(SDL_PollEvent(&e))
         handleEvent(e);
-
 }
 
 void render() {
@@ -309,7 +319,6 @@ void initButtons(){
     makeButton(newGame,buttonRect,&playNewGame,NEW_GAME_SCREEN);
     buttonRect = {WIDTH/2-64,HEIGHT/2+32,128,64};
     makeButton(mainMenu,buttonRect,&gotoMainMenu,NEW_GAME_SCREEN);
-
     buttonRect={WIDTH/2-128,10,256,64};
     makeButton(gameTitle,buttonRect,&nothing, MAIN_MENU);
     buttonRect={WIDTH/2-64,80,128,64};
@@ -396,7 +405,7 @@ void gameLoop() {
                     SDL_UpdateWindowSurface(gWin);
                 }
                 if(!keypressed)
-                    for(int i=0;i<200;i++){
+                    for(int i=0;i<200;i++) {
                         SDL_BlitScaled(alpha1,NULL,gWinSrf,&gWinSrf->clip_rect);
                         SDL_BlitScaled(alpha1,NULL,gWinSrf,&gWinSrf->clip_rect);
                         SDL_UpdateWindowSurface(gWin);
@@ -429,6 +438,8 @@ void gameLoop() {
                 gotoMainMenu();
             }
             case MAIN_MENU: {
+                SDL_Rect r = {100,100,256,128};
+                SDL_BlitSurface(mission1bossdialogue,NULL,gWinSrf,&r);
                 SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0xffd5ad);
                 break;
 
@@ -482,10 +493,11 @@ void gameLoop() {
             }
 
             case SCENE1p3: {
-                SDL_BlitSurface(SCENE1P3,NULL,gWinSrf,NULL);
+                SDL_Rect r = {0,0,640,480};
+                SDL_BlitSurface(SCENE1P3,NULL,gWinSrf,&r);
                 SDL_Event e;
                 while(SDL_PollEvent(&e)){
-                    if(e.type==SDL_KEYDOWN){
+                    if(e.type==SDL_KEYDOWN) {
                         currentGameState=MISSION1;
                         location = 0;
                         x=550;
@@ -499,7 +511,16 @@ void gameLoop() {
             case MISSION1: {
                 SDL_BlitSurface(Mission1[location],NULL,gWinSrf,NULL);
                 if(left()&&!right()&&x>0)
-                    x-=walkSpeed;
+                    if(location==0||x>200)
+                        x-=walkSpeed;
+                    else{
+                        SDL_Rect rct = {200,150,256,128};
+                        SDL_BlitSurface(mission1bossdialogue,NULL,gWinSrf,&rct);
+                        renderPlayer(1,false,x,y);
+                        render();
+                        SDL_Delay(5000);
+                        currentGameState = STORY2;
+                    }
                 if(right()&&!left()&&x<WIDTH-64)
                     x+=walkSpeed;
                 if(x>=30&&x<=120 && location == 0) {
@@ -510,18 +531,31 @@ void gameLoop() {
                     location = 0 ;
                     x=550;
                 }
-                renderPlayer(playerdir,walking&&(left()!=right()),x,y);
+                renderPlayer(playerdir,walking&&(left()!=right())&&(location==0||x>200),x,y);
+                break;
+            }
+
+            case STORY2: {
+                SDL_BlitSurface(story[part],NULL,gWinSrf,NULL);
+                SDL_Event e;
+                while(SDL_PollEvent(&e))
+                    if(e.type==SDL_KEYDOWN)
+                        part++;
+                if(part==6){
+                    currentGameState = DIGDOWN;
+                    location = 0; //location will now be the level
+                }
                 break;
             }
 
             case STORY: {
-                if(justenterdedstory){
-                    justenterdedstory=false;
-                    showandwaitforinput(story1);
-                    showandwaitforinput(story2);
-                    showandwaitforinput(story3);
-                }
-                currentGameState=SCENE1p1;
+                SDL_BlitSurface(story[part],NULL,gWinSrf,NULL);
+                SDL_Event e;
+                while(SDL_PollEvent(&e))
+                    if(e.type==SDL_KEYDOWN)
+                        part++;
+                if(part==3)
+                    currentGameState=SCENE1p1;
                 //scene1timer=-1;
                 break;
             }
