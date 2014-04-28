@@ -55,6 +55,7 @@ SDL_Surface* LD29_logo2 = NULL;
 SDL_Surface* LD29_splash = NULL;
 
 SDL_Surface* WIP = NULL;
+SDL_Surface* noteounghtime = NULL;
 
 SDL_Surface* ioanD_logo = NULL;
 
@@ -266,6 +267,8 @@ int loadMedia(){
 
     if((WIP         = load("res/WIP.png"))==NULL)
         return 1;
+    if((noteounghtime=load("res/bad_part.png"))==NULL)
+        return 1;
 
     if((continueGame= load("res/buttons/continueGame.png"))==NULL)
         return 1;
@@ -426,13 +429,13 @@ void renderPlayer(int dir, bool walking, int x, int y){
 }
 
 bool left(){
-    return keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_Q];
+    return keys[SDL_SCANCODE_A]||keys[SDL_SCANCODE_Q]||keys[SDL_SCANCODE_LEFT];
 }
 bool right(){
-    return keys[SDL_SCANCODE_D];
+    return keys[SDL_SCANCODE_D]||keys[SDL_SCANCODE_RIGHT];
 }
 bool up() {
-    return keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_Z];
+    return keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_Z]||keys[SDL_SCANCODE_UP];
 }
 
 void playGame(){
@@ -653,16 +656,17 @@ void gameLoop() {
             case DIGDOWN: {
                 //if(!levelGenerated)
                   //  generateLevel();
-                renderLevel();
-                render();
-                if(left()&&level[y/8][x/8+1]!=0)
-                    xvel++;
-                if(right()&&level[y/8][x/8-1]!=0)
-                    xvel--;
-                if(mousedown()){
-                    xvel = mousex - x;
-                    yvel = mousey - y;
-                }
+               // renderLevel();
+                //render();
+                //if(left()&&level[y/8][x/8+1]!=0)
+                 //   xvel++;
+                //if(right()&&level[y/8][x/8-1]!=0)
+                  //  xvel--;
+                //if(mousedown()){
+                  //  xvel = mousex - x;
+                    //yvel = mousey - y;
+                //}
+                SDL_BlitSurface(noteounghtime,NULL,gWinSrf,NULL);
             }
         }
             delta += (now-lastTime)/ms;
