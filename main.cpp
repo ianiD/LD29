@@ -95,13 +95,20 @@ void cleanUp() {
     SDL_FreeSurface(gWinSrf);
 }
 
+SDL_Rect* rct(int i, int j){
+    SDL_Rect result = {j*8-x,i*8-y,8,8};
+    return &result;
+}
+
 void renderLevel(){
     int light[256][256];
     //calculate light
     for(int i=0;i<256;i++)
         for(int j=0;j<256;j++)
             if(level[i][j]==1)
-                SDL_FillRect(gWinSrf,(SDL_Rect*)rct(i,j),0xffffff);
+                SDL_FillRect(gWinSrf,rct(i,j),0xffffff);
+            else if(level[i][j]>0)
+                SDL_FillRect(gWinSrf,(SDL_Rect*)rct(i,j),0x995511);
 }
 
 void saveGame(){
@@ -641,6 +648,21 @@ void gameLoop() {
             case NEW_GAME_SCREEN: {
                 SDL_FillRect(gWinSrf,&gWinSrf->clip_rect,0xffd5ad);
                 break;
+            }
+
+            case DIGDOWN: {
+                //if(!levelGenerated)
+                  //  generateLevel();
+                renderLevel();
+                render();
+                if(left()&&level[y/8][x/8+1]!=0)
+                    xvel++;
+                if(right()&&level[y/8][x/8-1]!=0)
+                    xvel--;
+                if(mousedown()){
+                    xvel = mousex - x;
+                    yvel = mousey - y;
+                }
             }
         }
             delta += (now-lastTime)/ms;
