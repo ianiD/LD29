@@ -24,31 +24,27 @@ bool justEnteredMMenu;
 #define NEW_GAME_SCREEN 3
 #define STORY  4
 #define STORY2 5
-#define SCENE1p1 11
-#define SCENE1p2 12
-#define SCENE1p3 13
-#define MISSION1 101
-#define DIGDOWN 102
+#define SCENE1p1 6
+#define SCENE1p2 7
+#define SCENE1p3 8
+#define MISSION1 9
+#define DIGDOWN 10
 
 int currentGameState = NONE;
 
-void saveGame(){
-    FILE* save = fopen("save","w");
-    fprintf(save,"%d\n",currentGameState);
-    if(currentGameState==DIGDOWN){
-        printf("%d %d",levelWidth,levelHeight);
-        for(int i=0;i<levelWidth;i++)
-            for(int j=0;j<levelHeight;j++)
-                printf("%c",' '+level[i][j]);
-    }
-}
+int levelWidth, levelHeight;
+char level[256][256];
 
-void gotoMainMenu(){
-    if(currentGameState>3)
-        saveGame();
-    currentGameState = MAIN_MENU;
-    justEnteredMMenu = true;
-}
+int saveState = NONE;
+int savePart = 0;
+int saveLocation = 0;
+char saveLevel[256][256];
+bool savedOnRAM;
+
+int location;
+int playerdir;
+bool walking;
+int x, y;
 
 SDL_Window* gWin = NULL;
 SDL_Surface* gWinSrf = NULL;
@@ -57,6 +53,8 @@ SDL_Surface* gWinSrf = NULL;
 SDL_Surface* LD29_logo1 = NULL;
 SDL_Surface* LD29_logo2 = NULL;
 SDL_Surface* LD29_splash = NULL;
+
+SDL_Surface* WIP = NULL;
 
 SDL_Surface* ioanD_logo = NULL;
 
@@ -97,6 +95,33 @@ void cleanUp() {
     SDL_FreeSurface(gWinSrf);
 }
 
+void renderLevel(){
+    int light[256][256];
+    //calculate light
+    for(int i=0;i<256;i++)
+        for(int j=0;j<256;j++)
+            if(level[i][j]==1)
+                SDL_FillRect(gWinSrf,(SDL_Rect*)rct(i,j),0xffffff);
+}
+
+void saveGame(){
+    savedOnRAM=true;
+    saveLocation = location;
+    savePart = part;
+    saveState = currentGameState;
+    for(int i=0;i<256;i++)
+        for(int j=0;j<256;j++)
+            saveLevel[i][j]=level[i][j];
+    fprintf(logs,"Successfully saved the game: %d %d %d to the RAM memory!\n",saveState,savePart,saveLocation);
+}
+
+void gotoMainMenu(){
+    if(currentGameState>3)
+        saveGame();
+    currentGameState = MAIN_MENU;
+}
+
+
 bool waliking = false;
 
 bool keys[512];
@@ -125,6 +150,17 @@ void openLDWebPage() {
 }
 
 void quit() {
+    if(savedOnRAM){
+        FILE* save = fopen("save","w");
+        fprintf(save,"%d %d %d\n",saveState,savePart,saveLocation);
+        for(int i=0;i<256;i++){
+            for(int j=0;j<256;j++)
+                printf("%d ",level[i][j]);
+            printf("\n");
+        }
+        fclose(save);
+        fprintf(logs,"Successfully saved the RAM save data to the file \"save\": %d %d %d\n",saveState,savePart,saveLocation);
+    }
     running = false;
 }
 
@@ -136,10 +172,7 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
-int location;
-int playerdir;
-bool walking;
-int x, y;
+
 
 int init_sdl() {
     logs = fopen("log.log","w");
@@ -159,20 +192,42 @@ int init_sdl() {
     }
 }
 void loadGame() {
-
-}
-void playGame(bool newGame){
-    currentGameState=DIGDOWN;
-    location=newGame; // I use location as the level now
+    if(savedOnRAM){
+        currentGameState = saveState;
+        location = saveLocation;
+        part = savePart;
+        for(int i=0;i<256;i++)
+            for(int j=0;j<256;j++)
+                level[i][j]=saveLevel[i][j];
+    }else{
+        int gameState;
+        FILE* save = fopen("save","r+");
+        if(fscanf(save,"%d%d%d",&currentGameState,&part,&location)==EOF){
+            fprintf(logs,"Could not open save file!!!");
+            gotoMainMenu();
+            return;
+        }
+        savedOnRAM=true;
+        saveState=currentGameState;
+        savePart=part;
+        saveLocation=location;
+        currentGameState=gameState;
+        for(int i=0;i<256;i++)
+            for(int j=0;j<256;j++){
+                fscanf(save,"%d",&level[i][j]);
+                saveLevel[i][j]=level[i][j];
+            }
+        fclose(save);
+    }
 }
 
 void gotoStory(){
+    part=1;
     currentGameState=STORY;
 }
 
 void continueLastGame() {
     loadGame();
-    playGame(false);
 }
 void playNewGame() {
     gotoStory();
@@ -182,7 +237,6 @@ void nothing(){}
 bool firstTimeNGS;
 void play() {
     currentGameState = NEW_GAME_SCREEN;
-    firstTimeNGS = true;
 }
 
 int loadMedia(){
@@ -201,6 +255,9 @@ int loadMedia(){
         return 1;
 
     if((winIcon     = load("res/icon.png"))==NULL)
+        return 1;
+
+    if((WIP         = load("res/WIP.png"))==NULL)
         return 1;
 
     if((continueGame= load("res/buttons/continueGame.png"))==NULL)
@@ -243,6 +300,7 @@ int loadMedia(){
         return 1;
     if((story[5]    = load("res/story/story5.png"))==NULL)
         return 1;
+    //loadGame();
     return 0;
 }
 
@@ -330,7 +388,8 @@ void showandwaitforinput(SDL_Surface* s) {
 
 void initButtons(){
     SDL_Rect buttonRect;
-
+    buttonRect = {WIDTH/2-256,HEIGHT/2-160,128,64};
+    makeButton(WIP,buttonRect,&nothing,NEW_GAME_SCREEN);
     buttonRect = {WIDTH/2-256,HEIGHT/2-132,256,128};
     makeButton(continueGame,buttonRect,&continueLastGame,NEW_GAME_SCREEN);
     buttonRect = {WIDTH/2,HEIGHT/2-132,256,128};
@@ -367,6 +426,11 @@ bool right(){
 }
 bool up() {
     return keys[SDL_SCANCODE_W]||keys[SDL_SCANCODE_Z];
+}
+
+void playGame(){
+    currentGameState=DIGDOWN;
+   // generateLevel(1);
 }
 
 void gameLoop() {
@@ -511,8 +575,7 @@ void gameLoop() {
             }
 
             case SCENE1p3: {
-                SDL_Rect r = {0,0,640,480};
-                SDL_BlitSurface(SCENE1P3,NULL,gWinSrf,&r);
+                SDL_BlitSurface(SCENE1P3,NULL,gWinSrf,NULL);
                 SDL_Event e;
                 while(SDL_PollEvent(&e)){
                     if(e.type==SDL_KEYDOWN) {
@@ -560,7 +623,7 @@ void gameLoop() {
                     if(e.type==SDL_KEYDOWN)
                         part++;
                 if(part==6)
-                    playGame(true);
+                    playGame();
                 break;
             }
 
